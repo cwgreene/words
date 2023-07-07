@@ -17,7 +17,7 @@ def main():
     parsers = parser.add_subparsers(dest='cmd')
     perms = parsers.add_parser("using")
     perms.add_argument("charset")
-    perms.add_argument("--min", type=int)
+    perms.add_argument("--min", type=int, default=0)
     perms.add_argument("--must")
     options = parser.parse_args()
 
