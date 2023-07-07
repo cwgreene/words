@@ -1,4 +1,5 @@
 import argparse
+import colorama
 
 # using
 def construct_from_perms(words, charset, minimum=0, must=None):
@@ -6,8 +7,10 @@ def construct_from_perms(words, charset, minimum=0, must=None):
     res = []
     for word in words:
         if set(word).issubset(s) and len(word) >= minimum:
-            if not must or must in word:
+            if not must:
                 res.append(word)
+            elif must in word:
+                res.append(word.replace(must,colorama.Fore.YELLOW + must + colorama.Fore.RESET))
     return res
 
 def main():
