@@ -16,10 +16,7 @@ def construct_from_perms(words, charset, minimum=0, must=None):
     return res
 
 def wordle_regex(base : str, somewhere : str, eliminated : str):
-    if eliminated:
-        noped_regex = "[^"+eliminated+"]"
-    else:
-        noped_regex = "."
+    noped_regex = "[^'"+eliminated+"]"
     indices = [i for i,c in enumerate(base) if c == "."]    
     base = list(base)
     res = []
@@ -35,17 +32,22 @@ def main():
     parser.add_argument("--source", default="/usr/share/dict/words")
 
     parsers = parser.add_subparsers(dest='cmd')
-    perms = parsers.add_parser("using")
-    perms.add_argument("charset")
-    perms.add_argument("--min", type=int, default=0)
-    perms.add_argument("--must")
-    srch = parsers.add_parser("search")
-    srch.add_argument("regex")
-    srch.add_argument("--contains", "-c", action="store_true")
-    srch = parsers.add_parser("wordle")
-    srch.add_argument("base")
-    srch.add_argument("--eliminated", "-e", default="")
-    srch.add_argument("--somewhere", "-s", default="")
+    perms = parsers.add_parser("using", help="words using a specified charset")
+    perms.add_argument("charset", help="words must use this charset")
+    perms.add_argument("--min", type=int, default=0, help="minimum length of word")
+    perms.add_argument("--must", help="these letters *must* be used")
+
+    srch = parsers.add_parser("search", help="search dictionary using regex")
+    srch.add_argument("regex", help="regex to match on")
+    srch.add_argument("--contains", "-c", action="store_true", help="allow match to be subset of word")
+
+    wordle = parsers.add_parser("wordle", help="Find words that match wordle clues")
+    wordle.add_argument("base", help="base string. Use '.' to indicate unfilled positions. Example: 'a..te'")
+    wordle.add_argument("--eliminated", "-e", default="", help="specify letters that appear nowhere")
+    wordle.add_argument("--somewhere", "-s", default="", help="specify letters that must appear somewhere")
+    wordle.add_argument("--debug", "-d", action="store_true", help="Print regex as well")
+    wordle.add_argument("--regex", "-r", action="store_true", help="Print regex and exit")
+
     options = parser.parse_args()
 
     with open(options.source) as srcfile:
@@ -67,10 +69,21 @@ def main():
         regex = wordle_regex(options.base,
             options.somewhere,
             options.eliminated)
+        if options.debug or options.regex:
+            print(regex)
+        if options.regex:
+            return
         for word in words:
             if re.match(regex, word):
-                print(word)
-        
+                pretty = ""
+                for i,c in enumerate(word):
+                    if c == options.base[i]:
+                        pretty += colorama.Fore.GREEN + c + colorama.Fore.RESET
+                    elif c in options.somewhere:
+                        pretty += colorama.Fore.YELLOW + c + colorama.Fore.RESET
+                    else:
+                        pretty += c
+                print(pretty)
 
 if __name__ == "__main__":
     main()
