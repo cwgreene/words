@@ -21,10 +21,11 @@ def wordle_regex(base : str, somewhere : str, eliminated : str):
     base = list(base)
     res = []
     for choice in itertools.combinations(indices, len(somewhere)):
-        this = base[:]
-        for i, c in enumerate(choice):
-            this[c] = somewhere[i]
-        res.append("".join(this))
+        for p in (itertools.permutations(choice)):
+            this = base[:]
+            for i, c in enumerate(p):
+                this[c] = somewhere[i]
+            res.append("".join(this))
     return "^("+"|".join(res).replace(".",noped_regex)+")$"
 
 def main():
@@ -47,6 +48,7 @@ def main():
     wordle.add_argument("--somewhere", "-s", default="", help="specify letters that must appear somewhere")
     wordle.add_argument("--debug", "-d", action="store_true", help="Print regex as well")
     wordle.add_argument("--regex", "-r", action="store_true", help="Print regex and exit")
+    wordle.add_argument("--nocolor", "-c", action="store_true", help="no color")
 
     options = parser.parse_args()
 
@@ -77,7 +79,9 @@ def main():
             if re.match(regex, word):
                 pretty = ""
                 for i,c in enumerate(word):
-                    if c == options.base[i]:
+                    if options.nocolor:
+                        pretty += c
+                    elif c == options.base[i]:
                         pretty += colorama.Fore.GREEN + c + colorama.Fore.RESET
                     elif c in options.somewhere:
                         pretty += colorama.Fore.YELLOW + c + colorama.Fore.RESET
