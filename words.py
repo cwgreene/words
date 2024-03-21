@@ -3,6 +3,10 @@ import colorama
 import re
 import itertools
 
+import z3
+from z3ext import contained_in
+from z3ext.strings import String
+
 # using
 def construct_from_perms(words, charset, minimum=0, must=None):
     s = set(charset)
@@ -28,6 +32,43 @@ def wordle_regex(base : str, somewhere : str, eliminated : str):
             res.append("".join(this))
     return "^("+"|".join(res).replace(".",noped_regex)+")$"
 
+def solve_keyword(words, dictionary):
+    #dictionary = ["helmet", "chew", "whim", "pipeline", "brute", "seat", "fuel"]
+    fullwords = [String(f"s{i}") for i in range(len(words))]
+    symbols = [String(f"u{i}") for i in range(len(words))]
+    empty = String("empty")
+    keyword = String("keyword")
+    prefixes = [word.split(".")[0] for word in words]
+    suffixes = [word.split(".")[1] for word in words]
+    constraints = [prefixes[i] + symbols[i] + suffixes[i] == fullwords[i] for i in range(len(words))]
+    print("compiling")
+    solver = z3.Solver()
+    solver.add(constraints)
+    solver.add(sum([sym for sym in symbols], start=empty) == keyword)
+    solver.add(empty == "")
+
+    # We apparently save a lot of time by immediately restricting the dictionary to
+    # words of the correct length.
+    solver.add(contained_in(keyword, filter(lambda w: len(w) == len(words), dictionary)))
+    solver.add([contained_in(fullword,
+        filter(lambda w: len(w) == len(words[i]), dictionary))
+        for i, fullword in enumerate(fullwords)])
+    print("checking")
+    assert solver.check() == z3.sat
+    m = solver.model()
+    print(colorama.Fore.GREEN + m[keyword].as_string() + colorama.Fore.WHITE)
+    for i in range(len(words)):
+        prefix, suffix = words[i].split(".")
+        fmt_string = (colorama.Style.BRIGHT +
+                        prefix + 
+                      colorama.Fore.BLUE +
+                        m[symbols[i]].as_string() +
+                      colorama.Fore.WHITE + 
+                        suffix +
+                      colorama.Style.NORMAL)
+        print(fmt_string) 
+                      
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", default="/usr/share/dict/words")
@@ -41,6 +82,9 @@ def main():
     srch = parsers.add_parser("search", help="search dictionary using regex")
     srch.add_argument("regex", help="regex to match on")
     srch.add_argument("--contains", "-c", action="store_true", help="allow match to be subset of word")
+
+    keyword = parsers.add_parser("keyword", help="solve keyword problem")
+    keyword.add_argument("cluewords", nargs="+", help="keywords of form 'KEYWOR.'")
 
     wordle = parsers.add_parser("wordle", help="Find words that match wordle clues")
     wordle.add_argument("base", help="base string. Use '.' to indicate unfilled positions. Example: 'a..te'")
@@ -61,6 +105,8 @@ def main():
                     minimum=options.min,
                     must=options.must):
             print(r)
+    if options.cmd == "keyword":
+        solve_keyword(options.cluewords, words)
     if options.cmd == "search":
         if not options.contains:
             options.regex = "^"+options.regex+"$"
