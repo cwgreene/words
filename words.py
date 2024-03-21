@@ -35,6 +35,8 @@ def wordle_regex(base : str, somewhere : str, eliminated : str):
 def solve_keyword(words, dictionary):
     # Although the z3 approach is cool
     # really, we should probably just use DFS.
+
+    # Get list of possible words.
     matches = []
     for w in words:
         this_matches = set()
@@ -46,7 +48,7 @@ def solve_keyword(words, dictionary):
 
     fullwords = [String(f"s{i}") for i in range(len(words))]
     symbols = [String(f"u{i}") for i in range(len(words))]
-    empty = String("empty")
+    empty = String("empty") # annoying, need it for sum to work.
     keyword = String("keyword")
     prefixes = [word.split(".")[0] for word in words]
     suffixes = [word.split(".")[1] for word in words]
@@ -54,7 +56,11 @@ def solve_keyword(words, dictionary):
 
     solver = z3.Solver()
     solver.add(constraints)
+    
+    # interestingly, length assertions don't help much in making this faster
     solver.add([sym.length() == 1 for sym in symbols])
+    solver.add(keyword.length() == len(words))
+
     solver.add(sum([sym for sym in symbols], start=empty) == keyword)
     solver.add(empty == "")
 
@@ -80,7 +86,6 @@ def solve_keyword(words, dictionary):
                         suffix +
                       colorama.Style.NORMAL)
         print(fmt_string) 
-                      
 
 def main():
     parser = argparse.ArgumentParser()
