@@ -35,6 +35,14 @@ def wordle_regex(base : str, somewhere : str, eliminated : str):
 def solve_keyword(words, dictionary):
     # Although the z3 approach is cool
     # really, we should probably just use DFS.
+    matches = []
+    for w in words:
+        this_matches = set()
+        for d in dictionary:
+            if re.match("^"+w+"$", d):
+                this_matches.add(d)
+        matches.append(this_matches)
+    print(matches)
 
     fullwords = [String(f"s{i}") for i in range(len(words))]
     symbols = [String(f"u{i}") for i in range(len(words))]
@@ -46,14 +54,14 @@ def solve_keyword(words, dictionary):
 
     solver = z3.Solver()
     solver.add(constraints)
+    solver.add([sym.length() == 1 for sym in symbols])
     solver.add(sum([sym for sym in symbols], start=empty) == keyword)
     solver.add(empty == "")
 
     # We apparently save a lot of time by immediately restricting the dictionary to
     # words of the correct length. I mean, we should really just use brute force DFS here.
     solver.add(contained_in(keyword, filter(lambda w: len(w) == len(words), dictionary)))
-    solver.add([contained_in(fullword,
-        filter(lambda w: len(w) == len(words[i]), dictionary))
+    solver.add([contained_in(fullword, matches[i])
         for i, fullword in enumerate(fullwords)])
 
     assert solver.check() == z3.sat
