@@ -33,7 +33,9 @@ def wordle_regex(base : str, somewhere : str, eliminated : str):
     return "^("+"|".join(res).replace(".",noped_regex)+")$"
 
 def solve_keyword(words, dictionary):
-    #dictionary = ["helmet", "chew", "whim", "pipeline", "brute", "seat", "fuel"]
+    # Although the z3 approach is cool
+    # really, we should probably just use DFS.
+
     fullwords = [String(f"s{i}") for i in range(len(words))]
     symbols = [String(f"u{i}") for i in range(len(words))]
     empty = String("empty")
@@ -41,22 +43,25 @@ def solve_keyword(words, dictionary):
     prefixes = [word.split(".")[0] for word in words]
     suffixes = [word.split(".")[1] for word in words]
     constraints = [prefixes[i] + symbols[i] + suffixes[i] == fullwords[i] for i in range(len(words))]
-    print("compiling")
+
     solver = z3.Solver()
     solver.add(constraints)
     solver.add(sum([sym for sym in symbols], start=empty) == keyword)
     solver.add(empty == "")
 
     # We apparently save a lot of time by immediately restricting the dictionary to
-    # words of the correct length.
+    # words of the correct length. I mean, we should really just use brute force DFS here.
     solver.add(contained_in(keyword, filter(lambda w: len(w) == len(words), dictionary)))
     solver.add([contained_in(fullword,
         filter(lambda w: len(w) == len(words[i]), dictionary))
         for i, fullword in enumerate(fullwords)])
-    print("checking")
+
     assert solver.check() == z3.sat
     m = solver.model()
+
+    # pretty print
     print(colorama.Fore.GREEN + m[keyword].as_string() + colorama.Fore.WHITE)
+
     for i in range(len(words)):
         prefix, suffix = words[i].split(".")
         fmt_string = (colorama.Style.BRIGHT +
