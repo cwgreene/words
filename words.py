@@ -32,6 +32,29 @@ def wordle_regex(base : str, somewhere : str, eliminated : str):
             res.append("".join(this))
     return "^("+"|".join(res).replace(".",noped_regex)+")$"
 
+def pretty_print_keyword(words, model, symbols):
+    longest = 0
+    indices = [] 
+    for word in words:
+        index = word.index(".")
+        if index > longest:
+            longest = index
+        indices.append(index)
+    # buffer + index = constant
+    # => buffer + index = longest
+    # buffer = longest - index
+    for i, (word, index) in enumerate(zip(words, indices)):
+        prefix, suffix = word.split(".")
+        buffer = " "*(longest - index)
+        fmt_string = buffer + (colorama.Style.BRIGHT +
+                        prefix + 
+                      colorama.Fore.BLUE +
+                        model[symbols[i]].as_string() +
+                      colorama.Fore.WHITE + 
+                        suffix +
+                      colorama.Style.NORMAL)
+        print(fmt_string)
+
 def solve_keyword(words, dictionary):
     # Although the z3 approach is cool
     # really, we should probably just use DFS.
@@ -75,17 +98,7 @@ def solve_keyword(words, dictionary):
 
     # pretty print
     print(colorama.Fore.GREEN + m[keyword].as_string() + colorama.Fore.WHITE)
-
-    for i in range(len(words)):
-        prefix, suffix = words[i].split(".")
-        fmt_string = (colorama.Style.BRIGHT +
-                        prefix + 
-                      colorama.Fore.BLUE +
-                        m[symbols[i]].as_string() +
-                      colorama.Fore.WHITE + 
-                        suffix +
-                      colorama.Style.NORMAL)
-        print(fmt_string) 
+    pretty_print_keyword(words, m, symbols)
 
 def main():
     parser = argparse.ArgumentParser()
