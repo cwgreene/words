@@ -1,0 +1,6 @@
+# Following fails:
+words keyword in.urer c.osure .rr a.t .one .ell
+
+words keyword in.urer c.osure .rr .nt .one .ell
+
+doesn't (also has multiple solutions due to 'int')
