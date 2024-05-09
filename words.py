@@ -32,29 +32,6 @@ def wordle_regex(base : str, somewhere : str, eliminated : str):
             res.append("".join(this))
     return "^("+"|".join(res).replace(".",noped_regex)+")$"
 
-def pretty_print_keyword_z3(words, model, symbols):
-    longest = 0
-    indices = [] 
-    for word in words:
-        index = word.index(".")
-        if index > longest:
-            longest = index
-        indices.append(index)
-    # buffer + index = constant
-    # => buffer + index = longest
-    # buffer = longest - index
-    for i, (word, index) in enumerate(zip(words, indices)):
-        prefix, suffix = word.split(".")
-        buffer = " "*(longest - index)
-        fmt_string = buffer + (colorama.Style.BRIGHT +
-                        prefix + 
-                      colorama.Fore.BLUE +
-                        model[symbols[i]].as_string() +
-                      colorama.Fore.WHITE + 
-                        suffix +
-                      colorama.Style.NORMAL)
-        print(fmt_string)
-
 def pretty_print_keyword(words, sln):
     longest = 0
     indices = [] 
@@ -72,7 +49,7 @@ def pretty_print_keyword(words, sln):
         fmt_string = buffer + (colorama.Style.BRIGHT +
                         prefix + 
                       colorama.Fore.BLUE +
-                        sln[index] + 
+                        sln[i] + 
                       colorama.Fore.WHITE + 
                         suffix +
                       colorama.Style.NORMAL)
@@ -101,52 +78,6 @@ def solve_keyword(words, dictionary):
             break   
     print(colorama.Fore.GREEN + word + colorama.Fore.WHITE)
     pretty_print_keyword(words,  word)
-
-def solve_keyword_z3(words, dictionary):
-    # Although the z3 approach is cool
-    # really, we should probably just use DFS.
-
-    # Get list of possible words.
-    matches = []
-    for w in words:
-        this_matches = set()
-        for d in dictionary:
-            if re.match("^"+w+"$", d):
-                if "'" not in d:
-                    this_matches.add(d)
-        matches.append(this_matches)
-    print(matches)
-    print(regex)
-    fullwords = [String(f"s{i}") for i in range(len(words))]
-    symbols = [String(f"u{i}") for i in range(len(words))]
-    empty = String("empty") # annoying, need it for sum to work.
-    keyword = String("keyword")
-    prefixes = [word.split(".")[0] for word in words]
-    suffixes = [word.split(".")[1] for word in words]
-    constraints = [prefixes[i] + symbols[i] + suffixes[i] == fullwords[i] for i in range(len(words))]
-
-    solver = z3.Solver()
-    solver.add(constraints)
-    
-    # interestingly, length assertions don't help much in making this faster
-    solver.add([sym.length() == 1 for sym in symbols])
-    solver.add(keyword.length() == len(words))
-
-    solver.add(sum([sym for sym in symbols], start=empty) == keyword)
-    solver.add(empty == "")
-
-    # We apparently save a lot of time by immediately restricting the dictionary to
-    # words of the correct length. I mean, we should really just use brute force DFS here.
-    solver.add(contained_in(keyword, filter(lambda w: len(w) == len(words), dictionary)))
-    solver.add([contained_in(fullword, matches[i])
-        for i, fullword in enumerate(fullwords)])
-
-    assert solver.check() == z3.sat
-    m = solver.model()
-
-    # pretty print
-    print(colorama.Fore.GREEN + m[keyword].as_string() + colorama.Fore.WHITE)
-    pretty_print_keyword_z3(words, m, symbols)
 
 def main():
     parser = argparse.ArgumentParser()
